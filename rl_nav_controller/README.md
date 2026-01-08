@@ -198,6 +198,104 @@ Publish goal poses to `/goal_pose` for autonomous navigation.
 ### 4. Direct Teleoperation
 Manual control via joystick axes (axis 1/0/2 for linear/angular motion).
 
+## Joystick Control Reference
+
+This section provides detailed joystick control instructions for the RSL joystick (`/rsl_joy` topic).
+
+### Joystick Axes
+
+| Axis | Function | Description |
+|------|----------|-------------|
+| **Axis 0** | Linear Y | Left/right strafing (direct teleoperation mode) |
+| **Axis 1** | Linear X | Forward/backward motion (direct teleoperation mode) |
+| **Axis 2** | Angular Z | Rotation left/right (direct teleoperation mode) |
+| **Axis 3** | Linear Z | Up/down for smart joystick goal height |
+| **Axis 4** | Velocity Ratio | Controls navigation speed: `ratio = (1 + axis_value)`. Push forward for full speed |
+| **Axis 5** | Smart Joystick Toggle | Push down (< -0.5) to enable smart joystick mode |
+
+### Joystick Buttons
+
+| Button | Function | Description |
+|--------|----------|-------------|
+| **Button 0** | Move Goal Down | Decrease moving goal Z position |
+| **Button 1** | Trigger Waypoints | Start waypoint sequence playback (home → inversed) |
+| **Button 2** | Reset Hidden State | Force reset of the policy's recurrent hidden state |
+| **Button 3** | Move Goal Up | Increase moving goal Z position |
+| **Button 4** | Clear Waypoint | Remove the last recorded waypoint |
+| **Button 6** | Record Waypoint | Save current robot position as a waypoint |
+| **Button 9** | **Abort Goal** | **Emergency stop** - Cancel current navigation goal immediately |
+| **Button 10** | Send Moving Goal | Publish the accumulated moving goal delta as a navigation target |
+| **Button 11** | Move Goal Forward | Increase moving goal X position (forward) |
+| **Button 12** | Move Goal Backward | Decrease moving goal X position (backward) |
+| **Button 13** | Move Goal Left | Increase moving goal Y position (left) |
+| **Button 14** | Move Goal Right | Decrease moving goal Y position (right) |
+
+### Control Mode Details
+
+#### Direct Teleoperation (Default)
+When smart joystick mode is disabled (axis 5 > -0.5), use the joystick axes for direct velocity control:
+- **Left stick**: Forward/backward (axis 1) and left/right strafe (axis 0)
+- **Right stick**: Rotation (axis 2)
+- Joystick inputs are added directly to any policy commands
+
+#### Smart Joystick Mode
+When enabled (axis 5 < -0.5):
+1. Current navigation goal is automatically aborted
+2. Joystick axes set a goal position relative to the robot (5 m scale)
+3. Goal is updated at 5 Hz with low-pass filtering for smooth control
+4. Robot uses the learned policy to navigate toward the joystick-defined goal
+5. Releasing axis 5 exits smart mode and aborts the smart joystick goal
+
+#### Moving Goal System
+Use buttons 0, 3, 11-14 to incrementally build a goal offset in robot frame:
+- Press direction buttons to accumulate offsets (0.2 m per press)
+- Press **Button 10** to send the accumulated goal as a navigation target
+- Goal is automatically transformed to world frame and published
+
+#### Waypoint Recording & Playback
+1. **Record waypoints**: Navigate to desired positions and press **Button 6** at each location
+2. **Remove mistakes**: Press **Button 4** to remove the last recorded waypoint
+3. **Start playback**: Press **Button 1** to begin autonomous waypoint sequence
+   - First plays "home" waypoints in recorded order
+   - Then plays "inversed" waypoints in reverse order
+4. **Abort anytime**: Press **Button 9** to stop and cancel current goal
+
+### Safety Features
+
+| Feature | Description |
+|---------|-------------|
+| **Emergency Stop (Button 9)** | Immediately cancels current navigation goal. Robot stops policy-based motion but joystick override still works |
+| **Velocity Ratio (Axis 4)** | Scales policy output velocity. Set to 0 (axis at -1) for policy pause while maintaining joystick control |
+| **Joystick Timeout** | If no joystick message received for 15 seconds, velocity ratio drops to 0 and robot stops |
+| **Goal Abortion on Mode Switch** | Switching between smart joystick and direct mode automatically aborts current goal |
+
+### Quick Reference Card
+
+```
+EMERGENCY STOP:     Button 9 (abort current goal)
+VELOCITY CONTROL:   Axis 4 (push forward = faster)
+
+WAYPOINT WORKFLOW:
+  Record:           Button 6
+  Remove Last:      Button 4
+  Play Sequence:    Button 1
+  Abort:            Button 9
+
+SMART JOYSTICK:
+  Enable:           Hold Axis 5 down
+  Control:          Axes 0, 1, 3 set goal direction
+  Disable:          Release Axis 5
+
+MOVING GOAL:
+  Adjust Position:  Buttons 0, 3, 11-14
+  Send Goal:        Button 10
+
+DIRECT CONTROL:
+  Forward/Back:     Axis 1
+  Left/Right:       Axis 0
+  Rotate:           Axis 2
+```
+
 ## Configuration
 
 Key parameters in [rl_nav_controller/constants.py](rl_nav_controller/constants.py):

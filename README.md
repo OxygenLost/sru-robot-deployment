@@ -16,6 +16,8 @@ This project provides a complete stack for quadrupedal robot navigation with **t
 
 **Control Modes:** Choose either autonomous navigation with the RL controller OR manual control with joystick - only one runs at a time. Both send velocity commands to the same low-level locomotion controller.
 
+> **🎮 Joystick Required:** A joystick (e.g., PS5 controller) is required for **both** control modes. In autonomous navigation mode, the joystick serves as a safety deadman switch. In manual teleoperation mode, it provides direct control. The robot will not move without a connected joystick.
+
 The `rl_nav_controller` package loads and deploys the trained **Spatially-enhanced Recurrent Unit (SRU)** neural network, enabling vision-based autonomous navigation to goal positions. See the [SRU project website](https://michaelfyang.github.io/sru-project-website/) for more details.
 
 ### System Architecture

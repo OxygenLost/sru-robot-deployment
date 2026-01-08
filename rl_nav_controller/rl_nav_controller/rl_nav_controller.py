@@ -890,7 +890,7 @@ def main(args=None):
     pkg_name = 'rl_nav_controller'
     pkg_path = get_package_share_directory(pkg_name)
     preprocess_model_path = os.path.join(pkg_path, 'deployment_policies', 'vae_pretrain_new_jit.pt')
-    policy_model_path = os.path.join(pkg_path, 'deployment_policies', 'policy.pt')
+    policy_model_path = os.path.join(pkg_path, 'deployment_policies', 'nav_policy_new.pt')
 
     navigation_policy_node = NavigationPolicyNode( 
         preprocess_model_path=preprocess_model_path,
