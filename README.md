@@ -52,7 +52,10 @@ The `rl_nav_controller` package loads and deploys the trained **Spatially-enhanc
 git clone <repo-url> ~/sru_ws/src/sru-robot-deployment
 cd ~/sru_ws/src/sru-robot-deployment
 
-# Install Python dependencies for RL navigation
+# Option 1: Use setup script (recommended - auto-detects GPU)
+./setup_ros2_onnx.sh
+
+# Option 2: Manual installation
 pip install numpy scipy opencv-python onnxruntime  # or onnxruntime-gpu for CUDA
 
 # Build
