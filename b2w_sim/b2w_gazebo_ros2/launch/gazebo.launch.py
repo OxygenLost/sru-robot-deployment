@@ -3,9 +3,9 @@ from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import (
-    IfElseSubstitution,
     LaunchConfiguration,
     PathJoinSubstitution,
+    PythonExpression,
 )
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
@@ -99,8 +99,12 @@ def generate_launch_description():
         ),
         launch_arguments={
             "gz_args": [
-                IfElseSubstitution(LaunchConfiguration("paused"), if_value="", else_value="-r "),
-                IfElseSubstitution(LaunchConfiguration("verbose"), if_value="-v4 ", else_value=""),
+                PythonExpression(
+                    ["'-r ' if '", LaunchConfiguration("paused"), "' == 'false' else ''"]
+                ),
+                PythonExpression(
+                    ["'-v4 ' if '", LaunchConfiguration("verbose"), "' == 'true' else ''"]
+                ),
                 # LaunchConfiguration("world_file"),
                 world_file_path,
             ],
@@ -128,16 +132,16 @@ def generate_launch_description():
         FindPackageShare("b2w_gazebo_ros2"), "config", "b2w_gz_bridge.yaml"
     ])
 
-    ros_gz_bridge = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            PathJoinSubstitution([
-                FindPackageShare("ros_gz_bridge"), "launch", "ros_gz_bridge.launch.py"
-            ])
-        ),
-        launch_arguments={
-            "bridge_name": "ros_gz_bridge",
-            "config_file": ros_gz_bridge_config,
-        }.items(),
+    ros_gz_bridge = Node(
+        package="ros_gz_bridge",
+        executable="parameter_bridge",
+        name="ros_gz_bridge",
+        arguments=[
+            "--ros-args",
+            "-p",
+            ["config_file:=", ros_gz_bridge_config],
+        ],
+        output="screen",
     )
 
     return LaunchDescription(

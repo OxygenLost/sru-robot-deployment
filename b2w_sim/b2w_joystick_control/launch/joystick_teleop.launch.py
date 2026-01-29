@@ -1,7 +1,8 @@
 import os
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.conditions import IfCondition
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
@@ -18,6 +19,12 @@ def generate_launch_description():
         'config_file',
         default_value='ps5_config.yaml',
         description='Configuration file name (in config folder)'
+    )
+
+    input_mode_arg = DeclareLaunchArgument(
+        'input_mode',
+        default_value='keyboard',
+        description='Input mode: keyboard or joystick'
     )
 
     # Get config file path
@@ -37,7 +44,10 @@ def generate_launch_description():
             'deadzone': 0.05,
             'autorepeat_rate': 10.0,
         }],
-        output='screen'
+        output='screen',
+        condition=IfCondition(
+            PythonExpression(["'", LaunchConfiguration('input_mode'), "' == 'joystick'"])
+        ),
     )
 
     # Joystick teleop node - converts /joy to /cmd_vel
@@ -46,12 +56,28 @@ def generate_launch_description():
         executable='joystick_teleop_node',
         name='joystick_teleop',
         parameters=[config_file],
-        output='screen'
+        output='screen',
+        condition=IfCondition(
+            PythonExpression(["'", LaunchConfiguration('input_mode'), "' == 'joystick'"])
+        ),
+    )
+
+    keyboard_node = Node(
+        package='b2w_joystick_control',
+        executable='keyboard_teleop_tk.py',
+        name='keyboard_teleop_tk',
+        parameters=[config_file],
+        output='screen',
+        condition=IfCondition(
+            PythonExpression(["'", LaunchConfiguration('input_mode'), "' == 'keyboard'"])
+        ),
     )
 
     return LaunchDescription([
         joy_dev_arg,
         config_file_arg,
+        input_mode_arg,
         joy_node,
         teleop_node,
+        keyboard_node,
     ])

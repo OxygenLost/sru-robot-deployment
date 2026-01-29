@@ -391,9 +391,10 @@ class NavigationPolicyNode(Node):
         self.joy_linear_x = 0.0
         self.joy_linear_y = 0.0
         self.joy_angular_z = 0.0
-        self.cmd_vel_ratio = 0.0
+        self.cmd_vel_ratio = 1.0
         self.joy_time = time.time()
         self.last_trigger_time = time.time()
+        self.joy_active = False
 
         # Moving goal state
         self.moving_goal_delta = [0.0, 0.0, 0.0]
@@ -539,13 +540,16 @@ class NavigationPolicyNode(Node):
         else:
             # 3) Joystick timeout logic
             if self.robot_odom_time - self.joy_time > self.system_delay:
-                self.cmd_vel_ratio = 0.0
-                diff = self.robot_odom_time - self.joy_time
-                self.get_logger().warn(
-                    '\033[93m' +
-                    f'Joystick timeout, stopping the robot. Time diff: {diff:.4f}s' +
-                    '\033[0m'
-                )
+                if self.joy_active:
+                    self.cmd_vel_ratio = 0.0
+                    diff = self.robot_odom_time - self.joy_time
+                    self.get_logger().warn(
+                        '\033[93m' +
+                        f'Joystick timeout, stopping the robot. Time diff: {diff:.4f}s' +
+                        '\033[0m'
+                    )
+                else:
+                    self.cmd_vel_ratio = 1.0
 
             self.get_logger().info(f'Joystick cmd_vel ratio: {self.cmd_vel_ratio:.4f}')
 
@@ -639,6 +643,7 @@ class NavigationPolicyNode(Node):
         Args:
             joy_msg: Joystick message with axes and button states
         """
+        self.joy_active = True
         self.cmd_vel_ratio = (1.0 + joy_msg.axes[4]) * 1.0
 
         if joy_msg.buttons[constants.BUTTON_ABORT] == 1:

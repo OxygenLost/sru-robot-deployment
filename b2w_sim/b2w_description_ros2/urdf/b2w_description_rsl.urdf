@@ -4,7 +4,7 @@
   <gazebo>
     <plugin
       filename="gz-sim-odometry-publisher-system"
-      name="gz::sim::systems::OdometryPublisher">
+      name="ignition::gazebo::systems::OdometryPublisher">
       <robot_base_frame>base_link</robot_base_frame>
       <odom_publish_frequency>100</odom_publish_frequency>
       <dimensions>3</dimensions>
@@ -13,11 +13,11 @@
     </plugin>
     <plugin
       filename="gz-sim-joint-state-publisher-system"
-      name="gz::sim::systems::JointStatePublisher">
+      name="ignition::gazebo::systems::JointStatePublisher">
       <topic>joint_states</topic>
     </plugin>
     <plugin
-      filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      filename="gz-sim-sensors-system" name="ignition::gazebo::systems::Sensors">
       <render_engine>ogre</render_engine>
     </plugin>
   </gazebo>
@@ -416,7 +416,7 @@
       velocity="23" />
     </joint>
     <gazebo>
-      <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+      <plugin filename="gz-sim-joint-position-controller-system" name="ignition::gazebo::systems::JointPositionController">
         <joint_name>FL_hip_joint</joint_name>
         <topic>FL_hip_joint_position_cmd</topic>
          <p_gain>100.0</p_gain>
@@ -480,7 +480,7 @@
       velocity="23" />
     </joint>
     <gazebo>
-      <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+      <plugin filename="gz-sim-joint-position-controller-system" name="ignition::gazebo::systems::JointPositionController">
         <joint_name>FL_thigh_joint</joint_name>
         <topic>FL_thigh_joint_position_cmd</topic>
          <p_gain>100.0</p_gain>
@@ -558,7 +558,7 @@
       velocity="14" />
     </joint>
     <gazebo>
-      <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+      <plugin filename="gz-sim-joint-position-controller-system" name="ignition::gazebo::systems::JointPositionController">
         <joint_name>FL_calf_joint</joint_name>
         <topic>FL_calf_joint_position_cmd</topic>
          <p_gain>100.0</p_gain>
@@ -625,7 +625,7 @@
       velocity="50" />
     </joint>
     <gazebo>
-      <plugin filename="gz-sim-joint-controller-system" name="gz::sim::systems::JointController">
+      <plugin filename="gz-sim-joint-controller-system" name="ignition::gazebo::systems::JointController">
         <joint_name>FL_foot_joint</joint_name>
         <topic>FL_foot_joint_velocity_cmd</topic>
         <p_gain>0.0</p_gain>
@@ -691,7 +691,7 @@
       velocity="23" />
     </joint>
     <gazebo>
-      <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+      <plugin filename="gz-sim-joint-position-controller-system" name="ignition::gazebo::systems::JointPositionController">
         <joint_name>FR_hip_joint</joint_name>
         <topic>FR_hip_joint_position_cmd</topic>
          <p_gain>100.0</p_gain>
@@ -755,7 +755,7 @@
       velocity="23" />
     </joint>
     <gazebo>
-      <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+      <plugin filename="gz-sim-joint-position-controller-system" name="ignition::gazebo::systems::JointPositionController">
         <joint_name>FR_thigh_joint</joint_name>
         <topic>FR_thigh_joint_position_cmd</topic>
          <p_gain>100.0</p_gain>
@@ -833,7 +833,7 @@
       velocity="14" />
     </joint>
     <gazebo>
-      <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+      <plugin filename="gz-sim-joint-position-controller-system" name="ignition::gazebo::systems::JointPositionController">
         <joint_name>FR_calf_joint</joint_name>
         <topic>FR_calf_joint_position_cmd</topic>
          <p_gain>100.0</p_gain>
@@ -900,7 +900,7 @@
       velocity="50" />
     </joint>
     <gazebo>
-      <plugin filename="gz-sim-joint-controller-system" name="gz::sim::systems::JointController">
+      <plugin filename="gz-sim-joint-controller-system" name="ignition::gazebo::systems::JointController">
         <joint_name>FR_foot_joint</joint_name>
         <topic>FR_foot_joint_velocity_cmd</topic>
         <p_gain>0.0</p_gain>
@@ -966,7 +966,7 @@
       velocity="23" />
     </joint>
     <gazebo>
-      <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+      <plugin filename="gz-sim-joint-position-controller-system" name="ignition::gazebo::systems::JointPositionController">
         <joint_name>RL_hip_joint</joint_name>
         <topic>RL_hip_joint_position_cmd</topic>
          <p_gain>100.0</p_gain>
@@ -1030,7 +1030,7 @@
       velocity="23" />
     </joint>
     <gazebo>
-      <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+      <plugin filename="gz-sim-joint-position-controller-system" name="ignition::gazebo::systems::JointPositionController">
         <joint_name>RL_thigh_joint</joint_name>
         <topic>RL_thigh_joint_position_cmd</topic>
          <p_gain>100.0</p_gain>
@@ -1108,7 +1108,7 @@
       velocity="14" />
     </joint>
     <gazebo>
-      <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+      <plugin filename="gz-sim-joint-position-controller-system" name="ignition::gazebo::systems::JointPositionController">
         <joint_name>RL_calf_joint</joint_name>
         <topic>RL_calf_joint_position_cmd</topic>
          <p_gain>100.0</p_gain>
@@ -1175,7 +1175,7 @@
       velocity="50" />
     </joint>
     <gazebo>
-      <plugin filename="gz-sim-joint-controller-system" name="gz::sim::systems::JointController">
+      <plugin filename="gz-sim-joint-controller-system" name="ignition::gazebo::systems::JointController">
         <joint_name>RL_foot_joint</joint_name>
         <topic>RL_foot_joint_velocity_cmd</topic>
         <p_gain>0.0</p_gain>
@@ -1241,7 +1241,7 @@
       velocity="23" />
     </joint>
     <gazebo>
-      <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+      <plugin filename="gz-sim-joint-position-controller-system" name="ignition::gazebo::systems::JointPositionController">
         <joint_name>RR_hip_joint</joint_name>
         <topic>RR_hip_joint_position_cmd</topic>
          <p_gain>100.0</p_gain>
@@ -1305,7 +1305,7 @@
       velocity="23" />
     </joint>
     <gazebo>
-      <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+      <plugin filename="gz-sim-joint-position-controller-system" name="ignition::gazebo::systems::JointPositionController">
         <joint_name>RR_thigh_joint</joint_name>
         <topic>RR_thigh_joint_position_cmd</topic>
          <p_gain>100.0</p_gain>
@@ -1383,7 +1383,7 @@
       velocity="14" />
     </joint>
     <gazebo>
-      <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
+      <plugin filename="gz-sim-joint-position-controller-system" name="ignition::gazebo::systems::JointPositionController">
         <joint_name>RR_calf_joint</joint_name>
         <topic>RR_calf_joint_position_cmd</topic>
          <p_gain>100.0</p_gain>
@@ -1450,7 +1450,7 @@
       velocity="50" />
     </joint>
     <gazebo>
-      <plugin filename="gz-sim-joint-controller-system" name="gz::sim::systems::JointController">
+      <plugin filename="gz-sim-joint-controller-system" name="ignition::gazebo::systems::JointController">
         <joint_name>RR_foot_joint</joint_name>
         <topic>RR_foot_joint_velocity_cmd</topic>
         <p_gain>0.0</p_gain>
@@ -1629,7 +1629,7 @@
       </force_torque>
       <plugin
         filename="gz-sim-forcetorque-system"
-        name="gz::sim::systems::ForceTorque">
+        name="ignition::gazebo::systems::ForceTorque">
       </plugin>
     </sensor>
   </gazebo>

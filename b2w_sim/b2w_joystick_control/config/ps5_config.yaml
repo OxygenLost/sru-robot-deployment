@@ -21,7 +21,7 @@
 
     # Velocity scaling (m/s and rad/s)
     scale_linear: 1.0         # Normal forward/strafe speed
-    scale_linear_turbo: 1.5   # Turbo forward/strafe speed
+    scale_linear_turbo: 2.5   # Turbo forward/strafe speed
     scale_angular: 0.75        # Normal rotation speed
     scale_angular_turbo: 1.0  # Turbo rotation speed
 
