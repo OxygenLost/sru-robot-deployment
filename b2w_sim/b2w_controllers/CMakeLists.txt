@@ -5,8 +5,17 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-set(ONNXRUNTIME_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/third_party/onnxruntime")
-list(APPEND CMAKE_PREFIX_PATH "${ONNXRUNTIME_ROOT}")
+string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" B2W_SYSTEM_PROCESSOR)
+set(ONNXRUNTIME_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/onnxruntime")
+if(B2W_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)")
+  set(ONNXRUNTIME_ROOT "${ONNXRUNTIME_BASE_DIR}/aarch64")
+else()
+  set(ONNXRUNTIME_ROOT "${ONNXRUNTIME_BASE_DIR}/x86_64")
+endif()
+
+if(NOT EXISTS "${ONNXRUNTIME_ROOT}")
+  message(FATAL_ERROR "ONNX Runtime directory not found: ${ONNXRUNTIME_ROOT}")
+endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
@@ -25,17 +34,42 @@ find_package(ament_index_cpp REQUIRED)
 # find_package(<dependency> REQUIRED)
 
 # Manually configure ONNX Runtime
-set(ONNXRUNTIME_INCLUDE_DIRS "${ONNXRUNTIME_ROOT}/include")
-set(ONNXRUNTIME_LIBRARIES "${ONNXRUNTIME_ROOT}/lib64/libonnxruntime.so")
+set(ONNXRUNTIME_INCLUDE_DIRS "${ONNXRUNTIME_BASE_DIR}/include")
+if(NOT EXISTS "${ONNXRUNTIME_INCLUDE_DIRS}")
+  message(FATAL_ERROR "ONNX Runtime include directory not found: ${ONNXRUNTIME_INCLUDE_DIRS}")
+endif()
+find_library(ONNXRUNTIME_LIBRARIES
+  NAMES onnxruntime
+  PATHS
+    "${ONNXRUNTIME_ROOT}/lib"
+    "${ONNXRUNTIME_ROOT}/lib64"
+  NO_DEFAULT_PATH
+)
+
+if(NOT ONNXRUNTIME_LIBRARIES)
+  message(FATAL_ERROR "libonnxruntime.so not found under ${ONNXRUNTIME_ROOT}/lib or lib64")
+endif()
+get_filename_component(ONNXRUNTIME_LIBRARY_DIR "${ONNXRUNTIME_LIBRARIES}" DIRECTORY)
+file(GLOB ONNXRUNTIME_RUNTIME_LIBS
+  "${ONNXRUNTIME_LIBRARY_DIR}/libonnxruntime*.so*"
+  "${ONNXRUNTIME_LIBRARY_DIR}/libonnxruntime_providers_shared.so*"
+)
+if(NOT ONNXRUNTIME_RUNTIME_LIBS)
+  message(FATAL_ERROR "No ONNX Runtime shared libraries found in ${ONNXRUNTIME_LIBRARY_DIR}")
+endif()
 
 # Create ONNX Runtime imported target
-add_library(onnxruntime SHARED IMPORTED)
-set_target_properties(onnxruntime PROPERTIES
+add_library(onnxruntime::onnxruntime SHARED IMPORTED)
+set_target_properties(onnxruntime::onnxruntime PROPERTIES
   IMPORTED_LOCATION "${ONNXRUNTIME_LIBRARIES}"
   INTERFACE_INCLUDE_DIRECTORIES "${ONNXRUNTIME_INCLUDE_DIRS}"
 )
 
 add_executable(b2w_controllers src/b2w_controllers.cpp)
+set_target_properties(b2w_controllers PROPERTIES
+  BUILD_RPATH "${ONNXRUNTIME_LIBRARY_DIR}"
+  INSTALL_RPATH "\$ORIGIN"
+)
 
 # Add include directories
 target_include_directories(b2w_controllers PUBLIC
@@ -44,7 +78,7 @@ target_include_directories(b2w_controllers PUBLIC
 )
 
 # Link ONNX Runtime library
-target_link_libraries(b2w_controllers PRIVATE onnxruntime)
+target_link_libraries(b2w_controllers PRIVATE onnxruntime::onnxruntime)
 
 # Use ament_target_dependencies to properly set up ROS 2 dependencies
 ament_target_dependencies(b2w_controllers PUBLIC
@@ -71,12 +105,11 @@ install(DIRECTORY src/policy/
   DESTINATION share/${PROJECT_NAME}/policy
 )
 
-install(TARGETS b2w_controllers
-  DESTINATION lib/${PROJECT_NAME})
-
 target_compile_features(b2w_controllers PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 
 install(TARGETS b2w_controllers
+  DESTINATION lib/${PROJECT_NAME})
+install(FILES ${ONNXRUNTIME_RUNTIME_LIBS}
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
