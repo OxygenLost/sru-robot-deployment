@@ -12,19 +12,22 @@
 
 #include <rclcpp/executors/multi_threaded_executor.hpp>
 
-namespace {
-constexpr std::chrono::milliseconds kInferencePeriod{20};   // 50 Hz
-constexpr std::chrono::milliseconds kPublishPeriod{5};      // 200 Hz
+namespace
+{
+    constexpr std::chrono::milliseconds kInferencePeriod{20}; // 50 Hz
+    constexpr std::chrono::milliseconds kPublishPeriod{5};    // 200 Hz
 
-template <typename T>
-T getOrDeclare(rclcpp::Node &node, const std::string &name, const T &default_value) {
-    rclcpp::Parameter param;
-    if (node.get_parameter(name, param)) {
-        return param.get_parameter_value().get<T>();
+    template <typename T>
+    T getOrDeclare(rclcpp::Node &node, const std::string &name, const T &default_value)
+    {
+        rclcpp::Parameter param;
+        if (node.get_parameter(name, param))
+        {
+            return param.get_parameter_value().get<T>();
+        }
+        return node.declare_parameter<T>(name, default_value);
     }
-    return node.declare_parameter<T>(name, default_value);
-}
-}  // namespace
+} // namespace
 
 B2WControllers::B2WControllers(const rclcpp::NodeOptions &options)
     : Node("b2w_controllers", options),
@@ -38,20 +41,24 @@ B2WControllers::B2WControllers(const rclcpp::NodeOptions &options)
       reordered_actions_(kNumJoints),
       rotation_matrix_(Eigen::Matrix3d::Identity()),
       odometry_received_(false),
-      odometry_warned_(false) {
+      odometry_warned_(false)
+{
     bool use_sim_time = getOrDeclare<bool>(*this, "use_sim_time", true);
     this->set_parameter(rclcpp::Parameter("use_sim_time", use_sim_time));
 
     loadParameters();
     resolvePolicyPath();
 
-    try {
+    try
+    {
         Ort::SessionOptions session_options;
         session_options.SetIntraOpNumThreads(1);
         session_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
         session_ = std::make_unique<Ort::Session>(env_, policy_path_.c_str(), session_options);
         RCLCPP_INFO(this->get_logger(), "Loaded policy from %s", policy_path_.string().c_str());
-    } catch (const Ort::Exception &e) {
+    }
+    catch (const Ort::Exception &e)
+    {
         RCLCPP_FATAL(this->get_logger(), "Failed to initialize ONNX session: %s", e.what());
         throw;
     }
@@ -59,7 +66,8 @@ B2WControllers::B2WControllers(const rclcpp::NodeOptions &options)
     input_node_names_ = {"obs", "h_in", "c_in"};
     output_node_names_ = {"actions", "h_out", "c_out"};
 
-    if (environment_config_.default_joint_positions.size() != kNumJoints) {
+    if (environment_config_.default_joint_positions.size() != kNumJoints)
+    {
         throw std::runtime_error("Environment configuration default_joint_positions size mismatch");
     }
     default_joint_positions_ = Eigen::Map<Eigen::VectorXd>(
@@ -94,7 +102,8 @@ B2WControllers::B2WControllers(const rclcpp::NodeOptions &options)
                 environment_config_.base_orientation_rpy[2]);
 }
 
-void B2WControllers::loadParameters() {
+void B2WControllers::loadParameters()
+{
     const std::vector<std::string> default_joint_names = {
         "FL_hip_joint", "FR_hip_joint", "RL_hip_joint", "RR_hip_joint",
         "FL_thigh_joint", "FR_thigh_joint", "RL_thigh_joint", "RR_thigh_joint",
@@ -115,10 +124,10 @@ void B2WControllers::loadParameters() {
         0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15};
 
     const std::vector<double> default_joint_positions = {
-        0.0,  0.0,  0.0,  0.0,  // hips
-        0.4,  0.4,  0.4,  0.4,  // thighs
-       -1.3, -1.3, -1.3, -1.3,  // calves
-        0.0,  0.0,  0.0,  0.0}; // feet
+        0.0, 0.0, 0.0, 0.0,     // hips
+        0.4, 0.4, 0.4, 0.4,     // thighs
+        -1.3, -1.3, -1.3, -1.3, // calves
+        0.0, 0.0, 0.0, 0.0};    // feet
 
     policy_package_ = getOrDeclare<std::string>(*this, "policy.package", "b2w_controllers");
     policy_relative_path_ = getOrDeclare<std::string>(*this, "policy.relative_path", "policy/policy_force_new.onnx");
@@ -134,7 +143,8 @@ void B2WControllers::loadParameters() {
     auto default_positions_param = getOrDeclare<std::vector<double>>(*this, "joint_model.default_positions", default_joint_positions);
 
     if (joint_names_.size() != kNumJoints || joint_topics_.size() != kNumJoints ||
-        reorder_param.size() != kNumJoints || default_positions_param.size() != kNumJoints) {
+        reorder_param.size() != kNumJoints || default_positions_param.size() != kNumJoints)
+    {
         throw std::runtime_error("Joint configuration parameter length mismatch with NUM_JOINTS");
     }
 
@@ -147,34 +157,41 @@ void B2WControllers::loadParameters() {
     std::vector<double> base_orientation_default =
         getOrDeclare<std::vector<double>>(*this, "environment.base_orientation_rpy", std::vector<double>{0.0, 0.0, 0.0});
 
-    if (base_position_default.size() != 3 || base_orientation_default.size() != 3) {
+    if (base_position_default.size() != 3 || base_orientation_default.size() != 3)
+    {
         throw std::runtime_error("Environment base pose parameters must have exactly three elements");
     }
 
     std::vector<double> joint_position_override = default_positions_param;
     const std::string env_prefix = "environment.profiles." + environment_profile_;
 
-    if (this->has_parameter(env_prefix + ".default_joint_positions")) {
+    if (this->has_parameter(env_prefix + ".default_joint_positions"))
+    {
         auto override = this->get_parameter(env_prefix + ".default_joint_positions").as_double_array();
-        if (override.size() != kNumJoints) {
+        if (override.size() != kNumJoints)
+        {
             throw std::runtime_error("Environment profile default_joint_positions size mismatch");
         }
         joint_position_override.assign(override.begin(), override.end());
     }
 
     std::vector<double> base_position_override = base_position_default;
-    if (this->has_parameter(env_prefix + ".base_position")) {
+    if (this->has_parameter(env_prefix + ".base_position"))
+    {
         auto override = this->get_parameter(env_prefix + ".base_position").as_double_array();
-        if (override.size() != 3) {
+        if (override.size() != 3)
+        {
             throw std::runtime_error("Environment profile base_position size must be 3");
         }
         base_position_override.assign(override.begin(), override.end());
     }
 
     std::vector<double> base_orientation_override = base_orientation_default;
-    if (this->has_parameter(env_prefix + ".base_orientation_rpy")) {
+    if (this->has_parameter(env_prefix + ".base_orientation_rpy"))
+    {
         auto override = this->get_parameter(env_prefix + ".base_orientation_rpy").as_double_array();
-        if (override.size() != 3) {
+        if (override.size() != 3)
+        {
             throw std::runtime_error("Environment profile base_orientation_rpy size must be 3");
         }
         base_orientation_override.assign(override.begin(), override.end());
@@ -189,14 +206,21 @@ void B2WControllers::loadParameters() {
     publish_joint_array_ = getOrDeclare<bool>(*this, "joint_model.publish_joint_array", true);
 }
 
-void B2WControllers::resolvePolicyPath() {
-    if (!policy_override_path_.empty()) {
+void B2WControllers::resolvePolicyPath()
+{
+    if (!policy_override_path_.empty())
+    {
         policy_path_ = std::filesystem::path(policy_override_path_);
-    } else {
+    }
+    else
+    {
         std::string package_share;
-        try {
+        try
+        {
             package_share = ament_index_cpp::get_package_share_directory(policy_package_);
-        } catch (const std::exception &e) {
+        }
+        catch (const std::exception &e)
+        {
             std::ostringstream oss;
             oss << "Unable to find package '" << policy_package_ << "' for policy lookup: " << e.what();
             throw std::runtime_error(oss.str());
@@ -204,19 +228,23 @@ void B2WControllers::resolvePolicyPath() {
         policy_path_ = std::filesystem::path(package_share) / policy_relative_path_;
     }
 
-    if (!std::filesystem::exists(policy_path_)) {
+    if (!std::filesystem::exists(policy_path_))
+    {
         std::ostringstream oss;
         oss << "Policy file not found: " << policy_path_.string();
         throw std::runtime_error(oss.str());
     }
 }
 
-void B2WControllers::initializeJointNamesAndTopics() {
-    if (joint_names_.size() != joint_topics_.size()) {
+void B2WControllers::initializeJointNamesAndTopics()
+{
+    if (joint_names_.size() != joint_topics_.size())
+    {
         throw std::runtime_error("joint_names_ and joint_topics_ size mismatch");
     }
 
-    for (size_t i = 0; i < joint_names_.size(); ++i) {
+    for (size_t i = 0; i < joint_names_.size(); ++i)
+    {
         const auto &name = joint_names_[i];
         const auto &topic = joint_topics_[i];
         joint_pubs_[name] = this->create_publisher<std_msgs::msg::Float64>(topic, rclcpp::QoS(10));
@@ -226,7 +254,8 @@ void B2WControllers::initializeJointNamesAndTopics() {
     joint_command_buffer_ = environment_config_.default_joint_positions;
 }
 
-void B2WControllers::setupSubscribers() {
+void B2WControllers::setupSubscribers()
+{
     odometry_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
         odometry_topic_, rclcpp::QoS(10),
         std::bind(&B2WControllers::odometryCallback, this, std::placeholders::_1));
@@ -240,12 +269,14 @@ void B2WControllers::setupSubscribers() {
         std::bind(&B2WControllers::jointStateCallback, this, std::placeholders::_1));
 }
 
-void B2WControllers::setupPublishers() {
+void B2WControllers::setupPublishers()
+{
     action_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("/joint_commands", 10);
     network_input_debug_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("/network_input_debug", 10);
 }
 
-void B2WControllers::setupTimers() {
+void B2WControllers::setupTimers()
+{
     inference_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
     pub_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
@@ -260,7 +291,8 @@ void B2WControllers::setupTimers() {
         pub_group_);
 }
 
-void B2WControllers::odometryCallback(const nav_msgs::msg::Odometry::SharedPtr msg) {
+void B2WControllers::odometryCallback(nav_msgs::msg::Odometry::ConstSharedPtr msg)
+{
     {
         std::lock_guard<std::mutex> lock(odometry_mutex_);
         base_lin_vel_ = msg->twist.twist.linear;
@@ -275,7 +307,8 @@ void B2WControllers::odometryCallback(const nav_msgs::msg::Odometry::SharedPtr m
         rotation_matrix_ = quat.toRotationMatrix();
     }
 
-    if (!odometry_received_) {
+    if (!odometry_received_)
+    {
         odometry_received_ = true;
         RCLCPP_INFO(this->get_logger(), "Odometry data received, starting inference.");
     }
@@ -283,13 +316,16 @@ void B2WControllers::odometryCallback(const nav_msgs::msg::Odometry::SharedPtr m
     processOdometry();
 }
 
-void B2WControllers::velocityCallback(const geometry_msgs::msg::Twist::SharedPtr msg) {
+void B2WControllers::velocityCallback(geometry_msgs::msg::Twist::ConstSharedPtr msg)
+{
     std::lock_guard<std::mutex> lock(odometry_mutex_);
     cmd_vel_ = *msg;
 }
 
-void B2WControllers::jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr msg) {
-    if (msg->position.size() < kNumJoints || msg->velocity.size() < kNumJoints) {
+void B2WControllers::jointStateCallback(sensor_msgs::msg::JointState::ConstSharedPtr msg)
+{
+    if (msg->position.size() < kNumJoints || msg->velocity.size() < kNumJoints)
+    {
         RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
                              "Received joint state with insufficient data");
         return;
@@ -297,22 +333,26 @@ void B2WControllers::jointStateCallback(const sensor_msgs::msg::JointState::Shar
 
     {
         std::lock_guard<std::mutex> lock(joint_state_mutex_);
-        for (int i = 0; i < kNumJoints; ++i) {
+        for (int i = 0; i < kNumJoints; ++i)
+        {
             int src_index = reorder_indices_[i];
             if (src_index < 0 || src_index >= static_cast<int>(msg->position.size()) ||
-                src_index >= static_cast<int>(msg->velocity.size())) {
-            RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 5000,
-                                  "Reorder index %d out of range", src_index);
-            return;
-        }
+                src_index >= static_cast<int>(msg->velocity.size()))
+            {
+                RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 5000,
+                                      "Reorder index %d out of range", src_index);
+                return;
+            }
             joint_positions_[i] = msg->position[src_index];
             joint_velocities_[i] = msg->velocity[src_index];
-    }
+        }
     }
 }
 
-void B2WControllers::processOdometry() {
-    if (!odometry_received_) {
+void B2WControllers::processOdometry()
+{
+    if (!odometry_received_)
+    {
         return;
     }
 
@@ -323,16 +363,20 @@ void B2WControllers::processOdometry() {
     }
 }
 
-void B2WControllers::inference() {
-    if (!odometry_received_) {
-        if (!odometry_warned_) {
+void B2WControllers::inference()
+{
+    if (!odometry_received_)
+    {
+        if (!odometry_warned_)
+        {
             RCLCPP_WARN(this->get_logger(), "No odometry data received yet.");
             odometry_warned_ = true;
         }
         return;
     }
 
-    if (!session_) {
+    if (!session_)
+    {
         RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 2000, "ONNX session is not initialized");
         return;
     }
@@ -374,10 +418,12 @@ void B2WControllers::inference() {
     input_buffer_[10] = cmd_vel_local.linear.y;
     input_buffer_[11] = cmd_vel_local.angular.z;
 
-    for (Eigen::Index i = 0; i < joint_positions_local.size(); ++i) {
+    for (Eigen::Index i = 0; i < joint_positions_local.size(); ++i)
+    {
         double wrapped_position = joint_positions_local[i] - default_joint_positions_[i];
         wrapped_position = std::fmod(wrapped_position + 2 * M_PI, 4 * M_PI);
-        if (wrapped_position < 0) {
+        if (wrapped_position < 0)
+        {
             wrapped_position += 4 * M_PI;
         }
         wrapped_position -= 2 * M_PI;
@@ -409,7 +455,8 @@ void B2WControllers::inference() {
 
     auto inference_start = std::chrono::steady_clock::now();
 
-    try {
+    try
+    {
         auto output_tensors = session_->Run(Ort::RunOptions{nullptr}, input_node_names_.data(),
                                             input_tensors.data(), input_tensors.size(),
                                             output_node_names_.data(), output_node_names_.size());
@@ -423,7 +470,9 @@ void B2WControllers::inference() {
 
         Eigen::Map<Eigen::VectorXf> actions_map(actions_data, kNumJoints);
         last_actions_ = actions_map.cast<double>();
-    } catch (const Ort::Exception &e) {
+    }
+    catch (const Ort::Exception &e)
+    {
         RCLCPP_ERROR(this->get_logger(), "ONNX Runtime error: %s", e.what());
         return;
     }
@@ -437,41 +486,48 @@ void B2WControllers::inference() {
     publishDebugData();
 }
 
-void B2WControllers::processActions() {
+void B2WControllers::processActions()
+{
     reordered_actions_ = last_actions_;
     reordered_actions_.segment(0, 12) *= non_foot_joint_scale_;
     reordered_actions_.segment(12, 4) *= foot_joint_scale_;
     reordered_actions_ = reordered_actions_ + default_joint_positions_;
 
     std::lock_guard<std::mutex> lock(command_mutex_);
-    for (size_t i = 0; i < joint_names_.size(); ++i) {
+    for (size_t i = 0; i < joint_names_.size(); ++i)
+    {
         joint_commands_[joint_names_[i]] = reordered_actions_[i];
         joint_command_buffer_[i] = reordered_actions_[i];
     }
 }
 
-void B2WControllers::publishDebugData() {
+void B2WControllers::publishDebugData()
+{
     if (network_input_debug_pub_->get_subscription_count() == 0 &&
-        network_input_debug_pub_->get_intra_process_subscription_count() == 0) {
+        network_input_debug_pub_->get_intra_process_subscription_count() == 0)
+    {
         return;
     }
 
     std_msgs::msg::Float64MultiArray debug_msg;
     debug_msg.data.reserve(input_buffer_.size());
-    for (float value : input_buffer_) {
+    for (float value : input_buffer_)
+    {
         debug_msg.data.push_back(static_cast<double>(value));
     }
     network_input_debug_pub_->publish(debug_msg);
 }
 
-void B2WControllers::publishJointCommands() {
+void B2WControllers::publishJointCommands()
+{
     std::vector<double> joint_snapshot;
     {
         std::lock_guard<std::mutex> lock(command_mutex_);
         joint_snapshot = joint_command_buffer_;
     }
 
-    for (size_t i = 0; i < joint_names_.size(); ++i) {
+    for (size_t i = 0; i < joint_names_.size(); ++i)
+    {
         std_msgs::msg::Float64 msg;
         msg.data = joint_snapshot[i];
         joint_pubs_[joint_names_[i]]->publish(msg);
@@ -479,15 +535,18 @@ void B2WControllers::publishJointCommands() {
 
     if (publish_joint_array_ &&
         (action_pub_->get_subscription_count() > 0 ||
-         action_pub_->get_intra_process_subscription_count() > 0)) {
+         action_pub_->get_intra_process_subscription_count() > 0))
+    {
         std_msgs::msg::Float64MultiArray aggregate_msg;
         aggregate_msg.data.assign(joint_snapshot.begin(), joint_snapshot.end());
         action_pub_->publish(aggregate_msg);
     }
 }
 
-int main(int argc, char **argv) {
-    try {
+int main(int argc, char **argv)
+{
+    try
+    {
         rclcpp::init(argc, argv);
         auto options = rclcpp::NodeOptions().automatically_declare_parameters_from_overrides(true);
         auto node = std::make_shared<B2WControllers>(options);
@@ -497,7 +556,9 @@ int main(int argc, char **argv) {
         exec.spin();
         rclcpp::shutdown();
         return 0;
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e)
+    {
         std::cerr << "Fatal error: " << e.what() << std::endl;
         return 1;
     }

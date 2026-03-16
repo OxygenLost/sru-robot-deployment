@@ -23,7 +23,8 @@
 #include <string>
 #include <vector>
 
-class B2WControllers : public rclcpp::Node {
+class B2WControllers : public rclcpp::Node
+{
 public:
     explicit B2WControllers(const rclcpp::NodeOptions &options = rclcpp::NodeOptions());
 
@@ -32,7 +33,8 @@ private:
     static constexpr int kInputSize = 60;
     static constexpr int kHiddenSize = 256;
 
-    struct EnvironmentConfig {
+    struct EnvironmentConfig
+    {
         std::vector<double> default_joint_positions;
         std::vector<double> base_position_xyz;
         std::vector<double> base_orientation_rpy;
@@ -49,13 +51,13 @@ private:
     void setupTimers();
 
     // Callback functions
-    void odometryCallback(const nav_msgs::msg::Odometry::SharedPtr msg);
-    void velocityCallback(const geometry_msgs::msg::Twist::SharedPtr msg);
-    void jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr msg);
+    void odometryCallback(nav_msgs::msg::Odometry::ConstSharedPtr msg);
+    void velocityCallback(geometry_msgs::msg::Twist::ConstSharedPtr msg);
+    void jointStateCallback(sensor_msgs::msg::JointState::ConstSharedPtr msg);
     void processOdometry();
 
     // Processing methods
-    void inference(); 
+    void inference();
     void processActions();
     void publishDebugData();
     void publishJointCommands();
@@ -71,7 +73,6 @@ private:
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr action_pub_;
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr network_input_debug_pub_;
     std::map<std::string, rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr> joint_pubs_;
-    
 
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::TimerBase::SharedPtr timer_pub_;
@@ -109,8 +110,8 @@ private:
     std::mutex joint_state_mutex_;
     std::mutex command_mutex_;
 
-    std::vector<float> h_in_data_;   // Hidden state data buffer
-    std::vector<float> c_in_data_;   // Cell state data buffer
+    std::vector<float> h_in_data_; // Hidden state data buffer
+    std::vector<float> c_in_data_; // Cell state data buffer
     std::array<float, kInputSize> input_buffer_;
 
     // Runtime configuration
@@ -133,6 +134,5 @@ private:
 
     bool publish_joint_array_;
 };
-
 
 #endif // B2W_CONTROLLERS_HPP

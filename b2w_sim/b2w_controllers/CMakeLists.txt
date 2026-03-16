@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.10)
 project(b2w_controllers)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -7,10 +7,18 @@ endif()
 
 string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" B2W_SYSTEM_PROCESSOR)
 set(ONNXRUNTIME_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/onnxruntime")
-if(B2W_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)")
+if(APPLE AND B2W_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)")
+  # macOS Apple Silicon: .dylib 直接放在 arm64/ 根目录下 / macOS dylib is directly under arm64/
+  set(ONNXRUNTIME_ROOT "${ONNXRUNTIME_BASE_DIR}/arm64")
+  set(ONNXRUNTIME_LIB_SEARCH_DIRS "${ONNXRUNTIME_BASE_DIR}/arm64")
+elseif(B2W_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)")
+  # Linux AArch64: ELF .so 在 aarch64/lib/ 下 / Linux ELF .so under aarch64/lib/
   set(ONNXRUNTIME_ROOT "${ONNXRUNTIME_BASE_DIR}/aarch64")
+  set(ONNXRUNTIME_LIB_SEARCH_DIRS "${ONNXRUNTIME_BASE_DIR}/aarch64/lib" "${ONNXRUNTIME_BASE_DIR}/aarch64/lib64")
 else()
+  # Linux x86_64
   set(ONNXRUNTIME_ROOT "${ONNXRUNTIME_BASE_DIR}/x86_64")
+  set(ONNXRUNTIME_LIB_SEARCH_DIRS "${ONNXRUNTIME_BASE_DIR}/x86_64/lib" "${ONNXRUNTIME_BASE_DIR}/x86_64/lib64")
 endif()
 
 if(NOT EXISTS "${ONNXRUNTIME_ROOT}")
@@ -39,10 +47,9 @@ if(NOT EXISTS "${ONNXRUNTIME_INCLUDE_DIRS}")
   message(FATAL_ERROR "ONNX Runtime include directory not found: ${ONNXRUNTIME_INCLUDE_DIRS}")
 endif()
 find_library(ONNXRUNTIME_LIBRARIES
-  NAMES onnxruntime
+  NAMES onnxruntime onnxruntime.1.21.0  # macOS 无 soname 软链时需带版本号 / versioned name for macOS without symlink
   PATHS
-    "${ONNXRUNTIME_ROOT}/lib"
-    "${ONNXRUNTIME_ROOT}/lib64"
+    ${ONNXRUNTIME_LIB_SEARCH_DIRS}
   NO_DEFAULT_PATH
 )
 
@@ -51,7 +58,8 @@ if(NOT ONNXRUNTIME_LIBRARIES)
 endif()
 get_filename_component(ONNXRUNTIME_LIBRARY_DIR "${ONNXRUNTIME_LIBRARIES}" DIRECTORY)
 file(GLOB ONNXRUNTIME_RUNTIME_LIBS
-  "${ONNXRUNTIME_LIBRARY_DIR}/libonnxruntime*.so*"
+  "${ONNXRUNTIME_LIBRARY_DIR}/libonnxruntime*.so*"          # Linux ELF 共享库 / Linux shared libs
+  "${ONNXRUNTIME_LIBRARY_DIR}/libonnxruntime*.dylib"       # macOS Mach-O 动态库 / macOS dynamic libs
   "${ONNXRUNTIME_LIBRARY_DIR}/libonnxruntime_providers_shared.so*"
 )
 if(NOT ONNXRUNTIME_RUNTIME_LIBS)
@@ -66,10 +74,18 @@ set_target_properties(onnxruntime::onnxruntime PROPERTIES
 )
 
 add_executable(b2w_controllers src/b2w_controllers.cpp)
-set_target_properties(b2w_controllers PROPERTIES
-  BUILD_RPATH "${ONNXRUNTIME_LIBRARY_DIR}"
-  INSTALL_RPATH "\$ORIGIN"
-)
+if(APPLE)
+  # macOS 使用 @loader_path 作为 RPATH 相对路径标识 / macOS uses @loader_path instead of $ORIGIN
+  set_target_properties(b2w_controllers PROPERTIES
+    BUILD_RPATH "${ONNXRUNTIME_LIBRARY_DIR}"
+    INSTALL_RPATH "@loader_path"
+  )
+else()
+  set_target_properties(b2w_controllers PROPERTIES
+    BUILD_RPATH "${ONNXRUNTIME_LIBRARY_DIR}"
+    INSTALL_RPATH "\$ORIGIN"
+  )
+endif()
 
 # Add include directories
 target_include_directories(b2w_controllers PUBLIC
