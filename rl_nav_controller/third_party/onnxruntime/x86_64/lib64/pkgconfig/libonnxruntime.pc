@@ -1,0 +1,1 @@
+../../../pkgconfig/libonnxruntime.pc

@@ -8,6 +8,10 @@ public:
   MeshPublisher()
   : Node("mesh_publisher")
   {
+    // Declare parameter for mesh name (default: ISAACLAB_TRAIN)
+    this->declare_parameter<std::string>("mesh_name", "ISAACLAB_TRAIN");
+    std::string mesh_name = this->get_parameter("mesh_name").as_string();
+
     publisher_ = this->create_publisher<visualization_msgs::msg::Marker>("world_mesh", 10);
 
     // Marker metadata
@@ -17,16 +21,19 @@ public:
     marker_.type         = visualization_msgs::msg::Marker::MESH_RESOURCE;
     marker_.action       = visualization_msgs::msg::Marker::ADD;
     marker_.mesh_resource =
-      "package://b2w_sim_worlds/models/Memory_Test/meshes/Memory_Test.dae";
+      "package://b2w_sim_worlds/models/" + mesh_name + "/meshes/" + mesh_name + ".dae";
+
+    RCLCPP_INFO(this->get_logger(), "Publishing mesh: %s", marker_.mesh_resource.c_str());
 
     // Pose
-    marker_.pose.position.x = 0.0;
-    marker_.pose.position.y = 0.0;
+    // Match the pose in ISAACLAB_TRAIN.world: <pose>-10 -5 0 0 0 0</pose>
+    marker_.pose.position.x = -10.0;
+    marker_.pose.position.y = -5.0;
     marker_.pose.position.z = 0.0;
-    marker_.pose.orientation.x = 1.0;
+    marker_.pose.orientation.x = 0.0;
     marker_.pose.orientation.y = 0.0;
     marker_.pose.orientation.z = 0.0;
-    marker_.pose.orientation.w = 0.0;
+    marker_.pose.orientation.w = 1.0;
 
     // Scale
     marker_.scale.x = 1.0;
