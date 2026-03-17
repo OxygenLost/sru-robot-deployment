@@ -18,7 +18,7 @@
     </plugin>
     <plugin
       filename="gz-sim-sensors-system" name="ignition::gazebo::systems::Sensors">
-      <render_engine>ogre</render_engine>
+      <render_engine>ogre2</render_engine>
     </plugin>
   </gazebo>
   <!-- <link name="world" />
@@ -153,7 +153,7 @@
       </camera>
       <always_on>1</always_on>
       <update_rate>15</update_rate>
-      <visualize>true</visualize>
+      <visualize>false</visualize>
       <topic>front_depth_camera</topic>
       <!-- <plugin
         filename="RosGzPointCloud"
@@ -226,7 +226,7 @@
       </camera>
       <always_on>1</always_on>
       <update_rate>15</update_rate>
-      <visualize>true</visualize>
+      <visualize>false</visualize>
       <topic>rear_depth_camera</topic>
       <!-- <plugin
         filename="RosGzPointCloud"
@@ -1621,7 +1621,7 @@
     <sensor name="force_torque" type="force_torque">
       <always_on>true</always_on>
       <update_rate>100.0</update_rate>
-      <visualize>true</visualize>
+      <visualize>false</visualize>
       <topic>collision_plate/force_torque</topic>
       <force_torque>
         <frame>child</frame>
@@ -1639,7 +1639,7 @@
       <!-- alive & ticking at 15 Hz -->
       <always_on>1</always_on>
       <update_rate>15</update_rate>
-      <visualize>true</visualize>
+      <visualize>false</visualize>
       <topic>zed_x_camera</topic>
 
       <camera>

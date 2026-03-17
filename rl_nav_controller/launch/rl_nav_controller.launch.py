@@ -37,19 +37,19 @@ def generate_launch_description():
     # ----------------------------------------------------------------------------
     # 3. Joy node (always launched)
     # ----------------------------------------------------------------------------
-    joy_node = Node(
-        package=joy_package_name,
-        executable='game_controller_node',
-        name='joy_rsl',
-        output='screen',
-        remappings=[
-            ('/joy', 'rsl_joy'),
-            ('/joy_vel', 'rsl_joy_vel'),
-        ],
-        parameters=[{
-            'autorepeat_rate': 50.0
-        }]
-    )
+    # joy_node = Node(
+    #     package=joy_package_name,
+    #     executable='game_controller_node',
+    #     name='joy_rsl',
+    #     output='screen',
+    #     remappings=[
+    #         ('/joy', 'rsl_joy'),
+    #         ('/joy_vel', 'rsl_joy_vel'),
+    #     ],
+    #     parameters=[{
+    #         'autorepeat_rate': 50.0
+    #     }]
+    # )
 
     # ----------------------------------------------------------------------------
     # 4. ZED camera launch (only if launch_zed=='true')
@@ -112,7 +112,7 @@ def generate_launch_description():
         launch_zed_arg,
 
         # 2) always-launch nodes
-        joy_node,
+        # joy_node,
         static_tf_node,
         rl_navigation_node,
 

@@ -1,3 +1,5 @@
+import platform
+
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.conditions import IfCondition
@@ -12,6 +14,7 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     # Declare all launch arguments
+    is_macos = platform.system() == "Darwin"
     
     # world_file_path = PathJoinSubstitution([
     #     FindPackageShare("b2w_gazebo"),
@@ -53,64 +56,62 @@ def generate_launch_description():
         ])
     )
 
-    # # Gzserver
-    # gzserver = IncludeLaunchDescription(
-    #     PythonLaunchDescriptionSource(
-    #         PathJoinSubstitution(
-    #             [FindPackageShare("ros_gz_sim"), "launch", "gz_sim.launch.py"]
-    #         )
-    #     ),
-    #     launch_arguments={
-    #         "gz_args": [
-    #             "-s ",
-    #             IfElseSubstitution(
-    #                 LaunchConfiguration("paused"), if_value="", else_value="-r "
-    #             ),
-    #             IfElseSubstitution(
-    #                 LaunchConfiguration("verbose"), if_value="-v4 ", else_value=""
-    #             ),
-    #             LaunchConfiguration("world_file"),
-    #         ],
-    #         "on_exit_shutdown": "true",
-    #     }.items(),
-    # )
-
-    # # Gzclient
-    # gzclient = IncludeLaunchDescription(
-    #     PythonLaunchDescriptionSource(
-    #         PathJoinSubstitution(
-    #             [FindPackageShare("ros_gz_sim"), "launch", "gz_sim.launch.py"]
-    #         )
-    #     ),
-    #     launch_arguments={
-    #         "gz_args": [
-    #             "-g ",
-    #             IfElseSubstitution(
-    #                 LaunchConfiguration("verbose"), if_value="-v4 ", else_value=""
-    #             ),
-    #         ],
-    #     }.items(),
-    #     condition=IfCondition(LaunchConfiguration("run_gui")),
-    # )
-    
-    gz_sim = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            PathJoinSubstitution([FindPackageShare("ros_gz_sim"), "launch", "gz_sim.launch.py"])
-        ),
-        launch_arguments={
-            "gz_args": [
-                PythonExpression(
-                    ["'-r ' if '", LaunchConfiguration("paused"), "' == 'false' else ''"]
-                ),
-                PythonExpression(
-                    ["'-v4 ' if '", LaunchConfiguration("verbose"), "' == 'true' else ''"]
-                ),
-                # LaunchConfiguration("world_file"),
-                world_file_path,
-            ],
-            "on_exit_shutdown": "true",
-        }.items(),
+    gz_sim_launch_source = PythonLaunchDescriptionSource(
+        PathJoinSubstitution([FindPackageShare("ros_gz_sim"), "launch", "gz_sim.launch.py"])
     )
+
+    # macOS: force split mode. Other platforms: keep single-process mode.
+    # macOS: 强制 server/gui 分离。其他平台：使用单进程模式。
+    if is_macos:
+        gzserver = IncludeLaunchDescription(
+            gz_sim_launch_source,
+            launch_arguments={
+                "gz_args": [
+                    "-s ",
+                    PythonExpression(
+                        ["'-r ' if '", LaunchConfiguration("paused"), "' == 'false' else ''"]
+                    ),
+                    PythonExpression(
+                        ["'-v4 ' if '", LaunchConfiguration("verbose"), "' == 'true' else ''"]
+                    ),
+                    world_file_path,
+                ],
+                "on_exit_shutdown": "true",
+            }.items(),
+        )
+
+        gzclient = IncludeLaunchDescription(
+            gz_sim_launch_source,
+            launch_arguments={
+                "gz_args": [
+                    "-g ",
+                    PythonExpression(
+                        ["'-v4 ' if '", LaunchConfiguration("verbose"), "' == 'true' else ''"]
+                    ),
+                ],
+            }.items(),
+            condition=IfCondition(LaunchConfiguration("run_gui")),
+        )
+
+        gz_actions = [gzserver, gzclient]
+    else:
+        gz_sim = IncludeLaunchDescription(
+            gz_sim_launch_source,
+            launch_arguments={
+                "gz_args": [
+                    PythonExpression(
+                        ["'-r ' if '", LaunchConfiguration("paused"), "' == 'false' else ''"]
+                    ),
+                    PythonExpression(
+                        ["'-v4 ' if '", LaunchConfiguration("verbose"), "' == 'true' else ''"]
+                    ),
+                    world_file_path,
+                ],
+                "on_exit_shutdown": "true",
+            }.items(),
+        )
+
+        gz_actions = [gz_sim]
 
     # Spawn robot model
     spawn_robot = Node(
@@ -148,9 +149,9 @@ def generate_launch_description():
         declared_arguments
         + [
             load_launch,
-            # gzserver,
-            # gzclient,
-            gz_sim,
+        ]
+        + gz_actions
+        + [
             spawn_robot,
             ros_gz_bridge,
         ]
