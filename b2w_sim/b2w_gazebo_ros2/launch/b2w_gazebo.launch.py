@@ -36,7 +36,7 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             "enable_mesh_publisher",
-            default_value="false",
+            default_value="true",
             description="Publish Gazebo meshes as RViz markers",
         ),
         DeclareLaunchArgument(

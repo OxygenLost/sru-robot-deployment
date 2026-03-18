@@ -7,6 +7,16 @@
   <maintainer email="fanyang1@ethz.ch">Fan Yang</maintainer>
   <license>MIT</license>
 
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+
+  <!-- C++ dependencies -->
+  <depend>rclcpp</depend>
+  <depend>opencv</depend>
+  <depend>ament_index_cpp</depend>
+  <build_depend>eigen</build_depend>
+
+  <!-- Python dependencies -->
   <depend>rclpy</depend>
   <depend>std_msgs</depend>
   <depend>geometry_msgs</depend>
@@ -21,6 +31,6 @@
   <test_depend>python3-pytest</test_depend>
 
   <export>
-    <build_type>ament_python</build_type>
+    <build_type>ament_cmake</build_type>
   </export>
 </package>

@@ -1,6 +1,6 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration, PythonExpression, PathJoinSubstitution
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch.conditions import IfCondition
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
@@ -13,7 +13,7 @@ def generate_launch_description():
     # ----------------------------------------------------------------------------
     sim_arg = DeclareLaunchArgument(
         'sim',
-        default_value='false',
+        default_value='true',
         description='If "true", run in simulation mode. If "false", run on real hardware.'
     )
     sim = LaunchConfiguration('sim')  # will be either 'true' or 'false'
@@ -52,7 +52,33 @@ def generate_launch_description():
     # )
 
     # ----------------------------------------------------------------------------
-    # 4. ZED camera launch (only if launch_zed=='true')
+    # 4. Livox ROS Driver2 launch (always launched)
+    # ----------------------------------------------------------------------------
+    # livox_driver_launch = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource([
+    #         PathJoinSubstitution([
+    #             FindPackageShare('livox_ros_driver2'),
+    #             'launch_ROS2',
+    #             'msg_MID360_launch.py'
+    #         ])
+    #     ])
+    # )
+
+    # ----------------------------------------------------------------------------
+    # 5. Super LIO launch (always launched)
+    # ----------------------------------------------------------------------------
+    super_lio_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('super_lio'),
+                'launch',
+                'Livox_mid360.py'
+            ])
+        ])
+    )
+
+    # ----------------------------------------------------------------------------
+    # 6. ZED camera launch (only if launch_zed=='true')
     # ----------------------------------------------------------------------------
     zed_launch_camera = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
@@ -63,59 +89,61 @@ def generate_launch_description():
             ])
         ]),
         launch_arguments={
-            'camera_model': 'zedx'
+            'camera_model': 'zed2i'
         }.items(),
         condition=IfCondition(launch_zed)  # only include when launch_zed == 'true'
     )
 
     # ----------------------------------------------------------------------------
-    # 5. Static tf publisher (always launched to publish base_link → zed_camera_link)
+    # 7. Static tf publisher (always launched to publish base_link → zed_camera_link)
     # ----------------------------------------------------------------------------
     static_tf_node = Node(
         package="tf2_ros",
         executable="static_transform_publisher",
         output="screen",
         arguments=[
-            "0.387", "0.0", "0.28",
-            "0", "0.349", "0",
+            "0.257", "0.0", "0.28",
+            "0", "0.0", "0",
             "base_link", "zed_camera_link"
         ],
     )
 
     # ----------------------------------------------------------------------------
-    # 6. RL‐navigation node (always launched, but use_sim_time follows 'sim')
+    # 8. RL‐navigation node (always launched, but use_sim_time follows 'sim')
     # ----------------------------------------------------------------------------
     rl_navigation_node = Node(
         package='rl_nav_controller',
-        executable='rl_nav_controller',  # or the actual executable name
+        executable='rl_nav_controller_node',  # C++ executable
         name='rl_nav_controller',
         output='screen',
         parameters=[{
-            'use_sim_time': sim
+            'use_sim_time': sim,
+            'use_sim': sim,
         }],
-        arguments=[
-            # This PythonExpression will expand to "--sim" if sim=="true", or "" otherwise.
-            PythonExpression([
-                "'",
-                sim,
-                "' == 'true' and '--sim' or ''"
-            ])
-        ]
+        # remappings=[
+        #     ('/dlio/odom_node/odom', '/lio/robo/odom'),
+        #     ('/path_manager/path_manager_ros/nav_vel', '/cmd_vel'),
+        #     # ('/zed/zed_node/depth/depth_registered', '/camera/camera/depth/image_rect_32fc1'),
+        # ]
     )
 
     # ----------------------------------------------------------------------------
-    # 7. Assemble LaunchDescription
+    # 9. Assemble LaunchDescription
     # ----------------------------------------------------------------------------
     return LaunchDescription([
         # 1) declare arguments
         sim_arg,
         launch_zed_arg,
 
-        # 2) always-launch nodes
+        # 2) launch included launch files
+        # livox_driver_launch,
+        # super_lio_launch,
+
+        # 3) always-launch nodes
         # joy_node,
         static_tf_node,
         rl_navigation_node,
 
-        # 3) conditionally include ZED launch only when launch_zed == 'true'
+        # 4) conditionally include ZED launch only when launch_zed == 'true'
         zed_launch_camera,
     ])
