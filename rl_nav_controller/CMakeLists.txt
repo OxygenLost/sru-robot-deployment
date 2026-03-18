@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.10)
 project(rl_nav_controller)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -11,9 +11,28 @@ endif()
 string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" RLC_SYSTEM_PROCESSOR)
 set(ONNXRUNTIME_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/onnxruntime")
 if(RLC_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)")
-  set(ONNXRUNTIME_ROOT "${ONNXRUNTIME_BASE_DIR}/aarch64")
+  if(APPLE AND EXISTS "${ONNXRUNTIME_BASE_DIR}/arm64")
+    set(ONNXRUNTIME_ROOT "${ONNXRUNTIME_BASE_DIR}/arm64")
+    set(ONNXRUNTIME_SEARCH_DIRS
+      "${ONNXRUNTIME_ROOT}"
+      "${ONNXRUNTIME_ROOT}/lib"
+      "${ONNXRUNTIME_ROOT}/lib64"
+    )
+  else()
+    set(ONNXRUNTIME_ROOT "${ONNXRUNTIME_BASE_DIR}/aarch64")
+    set(ONNXRUNTIME_SEARCH_DIRS
+      "${ONNXRUNTIME_ROOT}/lib"
+      "${ONNXRUNTIME_ROOT}/lib64"
+      "${ONNXRUNTIME_ROOT}"
+    )
+  endif()
 else()
   set(ONNXRUNTIME_ROOT "${ONNXRUNTIME_BASE_DIR}/x86_64")
+  set(ONNXRUNTIME_SEARCH_DIRS
+    "${ONNXRUNTIME_ROOT}/lib64"
+    "${ONNXRUNTIME_ROOT}/lib"
+    "${ONNXRUNTIME_ROOT}"
+  )
 endif()
 
 if(NOT EXISTS "${ONNXRUNTIME_ROOT}")
@@ -27,21 +46,23 @@ endif()
 
 find_library(ONNXRUNTIME_LIBRARIES
   NAMES onnxruntime
-  PATHS
-    "${ONNXRUNTIME_ROOT}/lib"
-    "${ONNXRUNTIME_ROOT}/lib64"
+  PATHS ${ONNXRUNTIME_SEARCH_DIRS}
   NO_DEFAULT_PATH
 )
 
 if(NOT ONNXRUNTIME_LIBRARIES)
-  message(FATAL_ERROR "libonnxruntime.so not found under ${ONNXRUNTIME_ROOT}/lib or lib64")
+  string(JOIN ", " ONNXRUNTIME_SEARCH_PATHS_MSG ${ONNXRUNTIME_SEARCH_DIRS})
+  message(FATAL_ERROR "ONNX Runtime library not found in: ${ONNXRUNTIME_SEARCH_PATHS_MSG}")
 endif()
 
 get_filename_component(ONNXRUNTIME_LIBRARY_DIR "${ONNXRUNTIME_LIBRARIES}" DIRECTORY)
 file(GLOB ONNXRUNTIME_RUNTIME_LIBS
   "${ONNXRUNTIME_LIBRARY_DIR}/libonnxruntime*.so*"
+  "${ONNXRUNTIME_LIBRARY_DIR}/libonnxruntime*.dylib"
   "${ONNXRUNTIME_LIBRARY_DIR}/libonnxruntime_providers_shared.so*"
+  "${ONNXRUNTIME_LIBRARY_DIR}/libonnxruntime_providers_shared*.dylib"
 )
+list(REMOVE_DUPLICATES ONNXRUNTIME_RUNTIME_LIBS)
 
 # Create ONNX Runtime imported target
 add_library(onnxruntime::onnxruntime SHARED IMPORTED)
@@ -120,10 +141,17 @@ ament_target_dependencies(rl_nav_controller_node PUBLIC
   ament_index_cpp
 )
 
-set_target_properties(rl_nav_controller_node PROPERTIES
-  BUILD_RPATH "${ONNXRUNTIME_LIBRARY_DIR}"
-  INSTALL_RPATH "\$ORIGIN"
-)
+if(APPLE)
+  set_target_properties(rl_nav_controller_node PROPERTIES
+    BUILD_RPATH "${ONNXRUNTIME_LIBRARY_DIR}"
+    INSTALL_RPATH "@loader_path"
+  )
+else()
+  set_target_properties(rl_nav_controller_node PROPERTIES
+    BUILD_RPATH "${ONNXRUNTIME_LIBRARY_DIR}"
+    INSTALL_RPATH "\$ORIGIN"
+  )
+endif()
 
 target_compile_features(rl_nav_controller_node PUBLIC cxx_std_17)
 

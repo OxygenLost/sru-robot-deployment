@@ -18,6 +18,12 @@ log/
 *.swo
 *~
 .DS_Store
+!rl_nav_controller/third_party/onnxruntime/**/*.so
+!rl_nav_controller/third_party/onnxruntime/**/*.so.*
+!rl_nav_controller/third_party/onnxruntime/**/*.dylib
+!rl_nav_controller/third_party/onnxruntime/**/pkgconfig/libonnxruntime.pc
+!rl_nav_controller/third_party/onnxruntime/**/cmake/onnxruntime/*.cmake
+rl_nav_controller/third_party/onnxruntime/**/*.dylib.dSYM/
 
 # CMake
 CMakeFiles/
